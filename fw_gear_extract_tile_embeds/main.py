@@ -82,4 +82,5 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
     print(f'Uploading output to acquisition: {acq.label}/{out_file_name}')
     acq.upload_file(f'{out_file_name}')
     os.remove(f'{out_file_name}') # remove from instance to save space
-
+    shutil.rmtree(local_output_dir) # remove the extracted files to save space
+    print("Done!")
