@@ -1,3 +1,8 @@
+# Use the Prov-Gigapath pretrained encoder to generate embeddings for each tile of a WSI
+#   requires CUDA enabled (NVIDIA) GPU
+#   input: zipped tiles from Prov-Gigapath tile extractor gear
+#   output: H5 file with tile embeddings
+
 import os
 import pandas as pd
 import numpy as np
@@ -58,7 +63,7 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
     slide_id = slide_name.split('_gigapath_tiles')[0]
     out_file_name = f'{slide_id}.h5'
 
-    # extract the zipped tiles
+    # extract the zipped tiles (output of prov-gigapath-tile-extractor gear)
     print("Unpacking the input file")
     local_output_dir = 'output/'
     with ZipFile(slide_path, 'r') as zip_ref:
@@ -81,10 +86,11 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
         print("Running inference to generate tile embeddings")
         tile_encoder_outputs = run_inference_with_tile_encoder(tile_paths, tile_encoder)
 
-        # save to H5 unless embeddings contain NaNs
-        if np.isnan(np.sum(tile_encoder_outputs['tile_embeds'])):
-            raise ValueError(f"Tile embeddings contain NaNs, please check input tile images")
-        else:
+        # save to H5 unless embeddings not a tensor and contain NaNs
+        try:
+            if np.isnan(np.sum(tile_encoder_outputs['tile_embeds'])):
+                raise ValueError(f"Tile embeddings contain NaNs, please check input tile images")
+        except:
             with h5py.File(out_file_name, 'w') as hf:
                 for key in tile_encoder_outputs.keys():
                     hf.create_dataset(key, data=tile_encoder_outputs[key])
@@ -92,8 +98,8 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
             print(f'Uploading output to acquisition: {acq.label}/{out_file_name}')
             acq.upload_file(f'{out_file_name}')
         
-        # clean up
-        os.remove(f'{out_file_name}') # remove from instance to save space
-        for tile_dir in glob(f'{local_output_dir}/*'):
-            shutil.rmtree(tile_dir) # remove the extracted files to save space
-        print("Done!")
+    # clean up
+    os.remove(f'{out_file_name}') # remove from instance to save space
+    for tile_dir in glob(f'{local_output_dir}/*'):
+        shutil.rmtree(tile_dir) # remove the extracted files to save space
+    print("Done!")
