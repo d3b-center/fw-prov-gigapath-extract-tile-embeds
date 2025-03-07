@@ -1,9 +1,11 @@
 import os
 import pandas as pd
+import numpy as np
 import json
 from zipfile import ZipFile
 import logging
 import shutil
+from glob import glob
 
 from fw_core_client import CoreClient
 from flywheel_gear_toolkit import GearToolkitContext
@@ -64,23 +66,34 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
         os.remove(slide_path) # remove the zip file to save space
 
     print(f'======= Generating tile embeddings for file: {slide_name} =======')
-
+    # make sure there are valid PNG files to process
+    local_tile_dir = f"{local_output_dir}/tiles/*"
+    local_tile_files = glob(f'{local_tile_dir}/*')
+    tile_paths = [img for img in local_tile_files if img.endswith('.png')]
+    if len(tile_paths) == 0:
+        raise ValueError(f"No valid tiles found in {local_tile_dir}")
+    else:
     # =========== Load the pretrained Gigapath model ===========================
-    print("Loading pretrained model")
-    tile_encoder, slide_encoder_model = load_tile_slide_encoder(global_pool=True)
+        print("Loading pretrained model")
+        tile_encoder, slide_encoder_model = load_tile_slide_encoder(global_pool=True)
 
-    # =========== Run inference to get tile embeddings ===========================
-    print("Running inference to generate tile embeddings")
-    local_tile_dir = local_output_dir + f'tiles/{slide_id}.svs/'
-    tile_paths = [os.path.join(local_tile_dir, img) for img in os.listdir(local_tile_dir) if img.endswith('.png')]
-    tile_encoder_outputs = run_inference_with_tile_encoder(tile_paths, tile_encoder)
+        # =========== Run inference to get tile embeddings ===========================
+        print("Running inference to generate tile embeddings")
+        tile_encoder_outputs = run_inference_with_tile_encoder(tile_paths, tile_encoder)
 
-    with h5py.File(out_file_name, 'w') as hf:
-        for key in tile_encoder_outputs.keys():
-            hf.create_dataset(key, data=tile_encoder_outputs[key])
+        # save to H5 unless embeddings contain NaNs
+        if np.isnan(np.sum(tile_encoder_outputs['tile_embeds'])):
+            raise ValueError(f"Tile embeddings contain NaNs, please check input tile images")
+        else:
+            with h5py.File(out_file_name, 'w') as hf:
+                for key in tile_encoder_outputs.keys():
+                    hf.create_dataset(key, data=tile_encoder_outputs[key])
 
-    print(f'Uploading output to acquisition: {acq.label}/{out_file_name}')
-    acq.upload_file(f'{out_file_name}')
-    os.remove(f'{out_file_name}') # remove from instance to save space
-    shutil.rmtree(local_output_dir) # remove the extracted files to save space
-    print("Done!")
+            print(f'Uploading output to acquisition: {acq.label}/{out_file_name}')
+            acq.upload_file(f'{out_file_name}')
+        
+        # clean up
+        os.remove(f'{out_file_name}') # remove from instance to save space
+        for tile_dir in glob(f'{local_output_dir}/*'):
+            shutil.rmtree(tile_dir) # remove the extracted files to save space
+        print("Done!")
