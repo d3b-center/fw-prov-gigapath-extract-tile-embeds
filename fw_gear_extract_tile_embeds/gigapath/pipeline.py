@@ -156,10 +156,10 @@ def run_inference_with_tile_encoder(image_paths: List[str], tile_encoder: torch.
     # run inference
     tile_encoder.eval()
     collated_outputs = {'tile_embeds': [], 'coords': []}
-    with torch.cuda.amp.autocast(dtype=torch.float16):
-        for batch in tqdm(tile_dl, desc='Running inference with tile encoder'):
-            collated_outputs['tile_embeds'].append(tile_encoder(batch['img'].cuda()).detach().cpu())
-            collated_outputs['coords'].append(batch['coords'])
+    # with torch.cuda.amp.autocast(dtype=torch.float16): # cast to lower precision for faster performance
+    for batch in tqdm(tile_dl, desc='Running inference with tile encoder'):
+        collated_outputs['tile_embeds'].append(tile_encoder(batch['img'].cuda()).detach().cpu())
+        collated_outputs['coords'].append(batch['coords'])
     return {k: torch.cat(v) for k, v in collated_outputs.items()}
 
 

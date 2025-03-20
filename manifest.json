@@ -6,7 +6,7 @@
   "maintainer": "D3b-TIRU <flywheel@d3b.center>",
   "url": "https://github.com/prov-gigapath/prov-gigapath",
   "source": "https://github.com/d3b-center/fw-prov-gigapath-extract-tile-embeds/tree/main",
-  "version": "0.0.5-1",
+  "version": "0.0.6",
   "license": "Apache-2.0",
   "custom": {
     "flywheel": {
@@ -14,7 +14,7 @@
     },
     "gear-builder": {
       "category": "utility",
-      "image": "chop.flywheel.io/prov-gigapath-extract-tile-embeds:0.0.5-1"
+      "image": "chop.flywheel.io/prov-gigapath-extract-tile-embeds:0.0.6"
     }
   },
   "inputs": {
