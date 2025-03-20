@@ -65,7 +65,7 @@ def run(client: CoreClient, gtk_context: GearToolkitContext):
 
     # extract the zipped tiles (output of prov-gigapath-tile-extractor gear)
     print("Unpacking the input file")
-    local_output_dir = 'output/'
+    local_output_dir = 'temp/'
     with ZipFile(slide_path, 'r') as zip_ref:
         zip_ref.extractall(local_output_dir)
         os.remove(slide_path) # remove the zip file to save space
